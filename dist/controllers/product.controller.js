@@ -52,12 +52,12 @@ exports.getProductById = getProductById;
 Create product
 -----------------------------------*/
 const createProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { title, originalPrice, price, discount, tag, image, category } = req.body;
+    const { title, originalprice, price, discount, tag, image, category } = req.body;
     console.log('Received data:', req.body);
     try {
-        const result = yield database_1.default.query(`INSERT INTO products (title, "originalPrice", price, discount, tag, image, category)
+        const result = yield database_1.default.query(`INSERT INTO products (title, "originalprice", price, discount, tag, image, category)
              VALUES ($1, $2, $3, $4, $5, $6, $7)
-             RETURNING *`, [title, originalPrice, price, discount, tag, image, category]);
+             RETURNING *`, [title, originalprice, price, discount, tag, image, category]);
         res.status(201).json(result.rows[0]);
     }
     catch (err) {
@@ -72,19 +72,19 @@ Update product
 const updateProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const { id } = req.params;
-    const { title, originalPrice, price, discount, tag, image, category } = req.body;
+    const { title, originalprice, price, discount, tag, image, category } = req.body;
     console.log('Update product ID:', id);
     console.log('Update data:', req.body);
     try {
         const result = yield database_1.default.query(`UPDATE products 
              SET title = $1,
-                 "originalPrice" = $2,
+                 "originalprice" = $2,
                  price = $3,
                  discount = $4,
                  tag = $5,
                  image = $6,
                  category = $7
-             WHERE id = $8`, [title, originalPrice, price, discount, tag, image, category, id]);
+             WHERE id = $8`, [title, originalprice, price, discount, tag, image, category, id]);
         console.log('Update result rowCount:', result.rowCount);
         if (((_a = result.rowCount) !== null && _a !== void 0 ? _a : 0) > 0) {
             res.json({ message: 'Cập nhật sản phẩm thành công' });

@@ -47,16 +47,16 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
 Create product
 -----------------------------------*/
 export const createProduct = async (req: Request, res: Response): Promise<void> => {
-    const { title, originalPrice, price, discount, tag, image, category } = req.body;
+    const { title, originalprice, price, discount, tag, image, category } = req.body;
 
     console.log('Received data:', req.body);
 
     try {
         const result = await pool.query(
-            `INSERT INTO products (title, originalPrice, price, discount, tag, image, category)
+            `INSERT INTO products (title, originalprice, price, discount, tag, image, category)
              VALUES ($1, $2, $3, $4, $5, $6, $7)
              RETURNING *`,
-            [title, originalPrice, price, discount, tag, image, category]
+            [title, originalprice, price, discount, tag, image, category]
         );
 
         res.status(201).json(result.rows[0]);
@@ -71,7 +71,7 @@ Update product
 -----------------------------------*/
 export const updateProduct = async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
-    const { title, originalPrice, price, discount, tag, image, category } = req.body;
+    const { title, originalprice, price, discount, tag, image, category } = req.body;
 
     console.log('Update product ID:', id);
     console.log('Update data:', req.body);
@@ -80,14 +80,14 @@ export const updateProduct = async (req: Request, res: Response): Promise<void> 
         const result = await pool.query(
             `UPDATE products 
              SET title = $1,
-                 "originalPrice" = $2,
+                 "originalprice" = $2,
                  price = $3,
                  discount = $4,
                  tag = $5,
                  image = $6,
                  category = $7
              WHERE id = $8`,
-            [title, originalPrice, price, discount, tag, image, category, id]
+            [title, originalprice, price, discount, tag, image, category, id]
         );
 
         console.log('Update result rowCount:', result.rowCount);
