@@ -1,23 +1,11 @@
-import dotenv from "dotenv";
-dotenv.config();
+import { Pool } from 'pg';
 
-import { Pool } from "pg";
-
-const isProduction = process.env.NODE_ENV === "production";
-
-const pool = new Pool(
-    isProduction
-        ? {
-            connectionString: process.env.DATABASE_URL, // Render dùng cái này
-            ssl: { rejectUnauthorized: false },         // Render bắt buộc
-        }
-        : {
-            host: process.env.PG_HOST,
-            user: process.env.PG_USER,
-            password: process.env.PG_PASSWORD,
-            database: process.env.PG_DATABASE,
-            port: Number(process.env.PG_PORT),
-        }
-);
+const pool = new Pool({
+    host: 'dpg-d4hakh2li9vc73e37ng0-a',
+    user: 'clothes_db_15cc_user',
+    password: 'grLMi8t67ntE6JC4w8eyMCOVBs58I4vi',
+    database: 'clothes_db_15cc',
+    port: 5432
+});
 
 export default pool;

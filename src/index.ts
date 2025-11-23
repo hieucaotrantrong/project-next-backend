@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import database from './config/database';
+import pool from './config/database';
 import authRoutes from './routes/authRoutes';
 import productRoutes from './routes/productRoutes';
 import chatbot from './routes/chatbot';
@@ -48,7 +48,7 @@ app.listen(PORT, () => {
 /*------------------------------------
 Check connect Database
 --------------------------------------*/
-database.connect()
+pool.connect()
     .then(client => {
         console.log("Database connected successfully!");
         client.release();

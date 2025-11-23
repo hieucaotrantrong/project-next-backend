@@ -6,11 +6,17 @@ Get all products
 -----------------------------------*/
 export const getAllProducts = async (req: Request, res: Response): Promise<void> => {
     try {
+        console.log('Attempting to query products...');
         const result = await pool.query('SELECT * FROM products');
+        console.log('Query successful, rows:', result.rows.length);
         res.json(result.rows);
     } catch (err) {
         console.error('Lỗi khi lấy sản phẩm:', err);
-        res.status(500).json({ error: 'Lỗi khi lấy sản phẩm' });
+        // Trả về thông tin lỗi chi tiết hơn trong development
+        res.status(500).json({
+            error: 'Lỗi khi lấy sản phẩm',
+            details: process.env.NODE_ENV !== 'production' ? err : undefined
+        });
     }
 };
 
@@ -47,7 +53,7 @@ export const createProduct = async (req: Request, res: Response): Promise<void> 
 
     try {
         const result = await pool.query(
-            `INSERT INTO products (title, "originalPrice", price, discount, tag, image, category)
+            `INSERT INTO products (title, originalPrice, price, discount, tag, image, category)
              VALUES ($1, $2, $3, $4, $5, $6, $7)
              RETURNING *`,
             [title, originalPrice, price, discount, tag, image, category]
