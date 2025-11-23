@@ -2,70 +2,68 @@ import { Request, Response } from 'express';
 import pool from '../config/database';
 
 /*----------------------------------
-Get all product
+Get all products
 -----------------------------------*/
-export const getAllProducts = async (req: Request, res: Response) => {
+export const getAllProducts = async (req: Request, res: Response): Promise<void> => {
     try {
-        const [rows] = await pool.query('SELECT * FROM products');
-        res.json(rows);
+        const result = await pool.query('SELECT * FROM products');
+        res.json(result.rows);
     } catch (err) {
+        console.error('Lỗi khi lấy sản phẩm:', err);
         res.status(500).json({ error: 'Lỗi khi lấy sản phẩm' });
     }
 };
 
 /*----------------------------------
-Get all product by id
+Get product by id
 -----------------------------------*/
-export const getProductById = async (req: Request, res: Response) => {
+export const getProductById = async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
 
     try {
-        const [rows] = await pool.query('SELECT * FROM products WHERE id = ?', [id]);
+        const result = await pool.query(
+            'SELECT * FROM products WHERE id = $1',
+            [id]
+        );
 
-        if ((rows as any[]).length > 0) {
-            res.json((rows as any[])[0]);
+        if (result.rows.length > 0) {
+            res.json(result.rows[0]);
         } else {
             res.status(404).json({ error: 'Sản phẩm không tồn tại' });
         }
     } catch (err) {
+        console.error('Lỗi khi lấy sản phẩm:', err);
         res.status(500).json({ error: 'Lỗi khi lấy sản phẩm' });
     }
 };
+
 /*----------------------------------
-Create Product
+Create product
 -----------------------------------*/
-export const createProduct = async (req: Request, res: Response) => {
+export const createProduct = async (req: Request, res: Response): Promise<void> => {
     const { title, originalPrice, price, discount, tag, image, category } = req.body;
 
     console.log('Received data:', req.body);
 
     try {
-        const [result] = await pool.query(
-            'INSERT INTO products (title, originalPrice, price, discount, tag, image, category) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        const result = await pool.query(
+            `INSERT INTO products (title, "originalPrice", price, discount, tag, image, category)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             RETURNING *`,
             [title, originalPrice, price, discount, tag, image, category]
         );
 
-        res.status(201).json({
-            id: (result as any).insertId,
-            title,
-            originalPrice,
-            price,
-            discount,
-            tag,
-            image,
-            category
-        });
+        res.status(201).json(result.rows[0]);
     } catch (err) {
         console.error('Database error:', err);
         res.status(500).json({ error: 'Lỗi khi thêm sản phẩm' });
     }
 };
 
-
 /*----------------------------------
-Update prodcut
+Update product
 -----------------------------------*/
-export const updateProduct = async (req: Request, res: Response) => {
+export const updateProduct = async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
     const { title, originalPrice, price, discount, tag, image, category } = req.body;
 
@@ -73,14 +71,22 @@ export const updateProduct = async (req: Request, res: Response) => {
     console.log('Update data:', req.body);
 
     try {
-        const [result] = await pool.query(
-            'UPDATE products SET title = ?, originalPrice = ?, price = ?, discount = ?, tag = ?, image = ?, category = ? WHERE id = ?',
+        const result = await pool.query(
+            `UPDATE products 
+             SET title = $1,
+                 "originalPrice" = $2,
+                 price = $3,
+                 discount = $4,
+                 tag = $5,
+                 image = $6,
+                 category = $7
+             WHERE id = $8`,
             [title, originalPrice, price, discount, tag, image, category, id]
         );
 
-        console.log('Update result:', result);
+        console.log('Update result rowCount:', result.rowCount);
 
-        if ((result as any).affectedRows > 0) {
+        if ((result.rowCount ?? 0) > 0) {
             res.json({ message: 'Cập nhật sản phẩm thành công' });
         } else {
             res.status(404).json({ error: 'Sản phẩm không tồn tại' });
@@ -92,15 +98,18 @@ export const updateProduct = async (req: Request, res: Response) => {
 };
 
 /*----------------------------------
-Delete Product
+Delete product
 -----------------------------------*/
-export const deleteProduct = async (req: Request, res: Response) => {
+export const deleteProduct = async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
 
     try {
-        const [result] = await pool.query('DELETE FROM products WHERE id = ?', [id]);
+        const result = await pool.query(
+            'DELETE FROM products WHERE id = $1',
+            [id]
+        );
 
-        if ((result as any).affectedRows > 0) {
+        if ((result.rowCount ?? 0) > 0) {
             res.json({ message: 'Xóa sản phẩm thành công' });
         } else {
             res.status(404).json({ error: 'Sản phẩm không tồn tại' });
@@ -110,4 +119,3 @@ export const deleteProduct = async (req: Request, res: Response) => {
         res.status(500).json({ error: 'Lỗi khi xóa sản phẩm' });
     }
 };
-

@@ -2,116 +2,122 @@ import { Router, Request, Response } from 'express';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import dotenv from 'dotenv';
 import pool from '../config/database';
-/*----------------------------------
------------------------------------*/
+
 dotenv.config();
 const router = Router();
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-/*----------------------------------
------------------------------------*/
+
 interface ChatRequest extends Request {
     body: {
         prompt: string;
     }
 }
 
+/* --------------------------------------------------------
+   FIX EXPRESS TS ERROR (KHÔNG TẠO FILE MỚI)
+--------------------------------------------------------- */
+const asyncHandler = (fn: any) => {
+    return (req: any, res: any, next: any) => {
+        Promise.resolve(fn(req, res, next)).catch(next);
+    };
+};
+
+/* --------------------------------------------------------
+   Chat Handler
+--------------------------------------------------------- */
 async function chatHandler(req: ChatRequest, res: Response): Promise<void> {
     try {
         const { prompt } = req.body;
 
         /*----------------------------------
-        Handle product query
+         Phát hiện câu hỏi sản phẩm
         -----------------------------------*/
-        const isProductQuery = prompt.toLowerCase().includes('có') &&
-            (prompt.toLowerCase().includes('không') || prompt.toLowerCase().includes('ko'));
+        const isProductQuery =
+            prompt.toLowerCase().includes('có') &&
+            (prompt.toLowerCase().includes('không') ||
+                prompt.toLowerCase().includes('ko'));
 
         if (isProductQuery) {
-            /*----------------------------------
-            Handle keywords
-            -----------------------------------*/
-            const keywords = prompt.toLowerCase()
-                .replace(/có|không|cái|ko|những|các|sản phẩm|hay|là|nào|gì|thế|như|vậy/g, '')
+            const keywords = prompt
+                .toLowerCase()
+                .replace(/có|không|ko|cái|những|các|sản phẩm|hay|là|nào|gì|thế|như|vậy/g, '')
                 .trim()
                 .split(' ')
-                .filter(word => word.length > 2);
-            /*----------------------------------
-            Handle response 
-            -----------------------------------*/
+                .filter((word) => word.length > 2);
+
             if (keywords.length > 0) {
+                /* --------------------------------------------
+                    Build PostgreSQL LIKE Query  
+                   -------------------------------------------- */
+                const searchQuery = keywords
+                    .map((_, index) => `LOWER(title) LIKE LOWER($${index + 1})`)
+                    .join(' OR ');
 
-                const searchQuery = keywords.map(() => 'LOWER(title) LIKE LOWER(?)').join(' OR ');
-                const searchParams = keywords.map(term => `%${term}%`);
+                const searchParams = keywords.map((k) => `%${k}%`);
 
-                /*----------------------------------
-                Connect database
-                -----------------------------------*/
-                const [products] = await pool.execute(
+                /* --------------------------------------------
+                    Query PostgreSQL
+                   -------------------------------------------- */
+                const result = await pool.query(
                     `SELECT * FROM products WHERE ${searchQuery} ORDER BY title`,
                     searchParams
                 );
-                /*----------------------------------
-                    return response
-                 -----------------------------------*/
-                if (Array.isArray(products) && products.length > 0) {
+
+                const products = result.rows;
+
+                if (products.length > 0) {
                     let response = 'Có, chúng tôi có các sản phẩm sau:\n\n';
-                    products.forEach((product: any, index) => {
+
+                    products.forEach((product: any, index: number) => {
                         response += `${index + 1}. ${product.title}\n`;
-                        response += `   - Giá gốc: ${product.originalPrice}đ\n`;
+                        response += `   - Giá gốc: ${product.originalprice}đ\n`;
                         response += `   - Giá khuyến mãi: ${product.price}đ\n`;
                         response += `   - Giảm giá: ${product.discount}%\n`;
                         if (product.tag) response += `   - Tag: ${product.tag}\n`;
-
                         response += '\n';
                     });
+
                     res.json({ text: response });
                     return;
                 } else {
-                    res.json({ text: `Xin lỗi, hiện tại chúng tôi không có sản phẩm ${keywords.join(' ')} trong kho.` });
+                    res.json({
+                        text: `Xin lỗi, chúng tôi không tìm thấy sản phẩm: ${keywords.join(
+                            ' '
+                        )}.`,
+                    });
                     return;
                 }
             }
         }
 
-        /*----------------------------------
-        handle question  Ai
-        -----------------------------------*/
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" }); // Sửa lại tên model
+        // Nếu không phải hỏi sản phẩm -> dùng Gemini AI
+        const model = genAI.getGenerativeModel({
+            model: 'gemini-2.5-flash',
+        });
 
         const result = await model.generateContent(prompt);
         const response = await result.response;
+
         res.json({ text: response.text() });
-
-
-    } catch (error) {
+    } catch (error: any) {
         console.error('Chatbot error:', error);
 
-        // Xử lý lỗi rate limit của Google Generative AI
-        if (
-            typeof error === 'object' &&
-            error !== null &&
-            'status' in error &&
-            (error as any).status === 429
-        ) {
+        if (error?.status === 429) {
             res.status(429).json({
-                error: 'Hiện tại hệ thống đang quá tải, vui lòng thử lại sau ít phút.'
+                error: 'Hệ thống quá tải, vui lòng thử lại sau.',
             });
             return;
         }
 
         res.status(500).json({
-            error: error instanceof Error ? error.message : 'Unknown error'
+            error: error.message || 'Unknown server error',
         });
     }
 }
-/*----------------------------------
------------------------------------*/
-router.post('/chat', chatHandler);
+
+/* --------------------------------------------------------
+   Route
+--------------------------------------------------------- */
+router.post('/chat', asyncHandler(chatHandler));
 
 export default router;
-
-
-
-
-
-
-

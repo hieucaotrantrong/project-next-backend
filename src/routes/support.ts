@@ -1,84 +1,67 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import pool from '../config/database';
 import { adminAuth } from '../middleware/adminAuth';
-import { RowDataPacket, OkPacket } from 'mysql2';
 
 const router = Router();
 
-/*----------------------------------
------------------------------------*/
-interface SupportRequest extends RowDataPacket {
-    id: number;
-    name: string;
-    email: string;
-    topic: string;
-    message: string;
-    reply?: string;
-    status: 'pending' | 'replied';
-    created_at: Date;
-    replied_at?: Date;
-}
+/* ----------------------------------------------------
+   FIX EXPRESS TS RETURN ERROR (KHÔNG TẠO FILE MỚI)
+---------------------------------------------------- */
+const asyncHandler = (fn: any) => {
+    return (req: any, res: any, next: any) => {
+        Promise.resolve(fn(req, res, next)).catch(next);
+    };
+};
 
 /*----------------------------------
+Get all support requests
 -----------------------------------*/
-interface TypedRequestHandler {
-    (req: Request, res: Response, next: NextFunction): Promise<void>;
-}
-
-/*----------------------------------
-Get all request support
------------------------------------*/
-const getAllRequests: TypedRequestHandler = async (_req, res) => {
+const getAllRequests = asyncHandler(async (_req: Request, res: Response) => {
     try {
-        const [requests] = await pool.execute<SupportRequest[]>(
-            'SELECT * FROM support_requests ORDER BY created_at DESC'
+        const result = await pool.query(
+            `SELECT * FROM support_requests ORDER BY created_at DESC`
         );
-        res.json(requests);
+
+        res.json(result.rows);
     } catch (error) {
         console.error('Lỗi khi lấy danh sách hỗ trợ:', error);
         res.status(500).json({ error: 'Lỗi server' });
     }
-};
+});
+
 /*----------------------------------
-Support response function requested 1
+Reply to a support request
 -----------------------------------*/
-const replyToRequest: TypedRequestHandler = async (req, res) => {
+const replyToRequest = asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const { reply } = req.body;
 
-        /*----------------------------------
-        Connetdb getall support
-        -----------------------------------*/
-        const [requests] = await pool.execute<SupportRequest[]>(
-            'SELECT email, topic FROM support_requests WHERE id = ?',
+        // Lấy thông tin support request
+        const result = await pool.query(
+            `SELECT email, topic FROM support_requests WHERE id = $1`,
             [id]
         );
 
-        if (requests.length === 0) {
+        if (result.rows.length === 0) {
             res.status(404).json({ error: 'Không tìm thấy yêu cầu hỗ trợ' });
             return;
         }
 
-        const request = requests[0];
+        const request = result.rows[0];
 
-        /*----------------------------------
-         -----------------------------------*/
-        await pool.execute(
-            'UPDATE support_requests SET reply = ?, status = "replied", replied_at = NOW() WHERE id = ?',
+        // Cập nhật phản hồi
+        await pool.query(
+            `UPDATE support_requests 
+             SET reply = $1, status = 'replied', replied_at = NOW() 
+             WHERE id = $2`,
             [reply, id]
         );
 
-        /*----------------------------------
-       -----------------------------------*/
-        console.log('Creating notification for:', {
-            email: request.email,
-            topic: request.topic,
-            reply: reply
-        });
-
-        await pool.execute(
-            'INSERT INTO notifications (user_email, title, message, is_read) VALUES (?, ?, ?, FALSE)',
+        // Tạo thông báo
+        await pool.query(
+            `INSERT INTO notifications (user_email, title, message, "read")
+             VALUES ($1, $2, $3, FALSE)`,
             [
                 request.email,
                 `Phản hồi cho yêu cầu: ${request.topic}`,
@@ -91,12 +74,12 @@ const replyToRequest: TypedRequestHandler = async (req, res) => {
         console.error('Lỗi khi phản hồi:', error);
         res.status(500).json({ error: 'Lỗi server' });
     }
-};
+});
 
 /*----------------------------------
-Create request support handler
+Create support request
 -----------------------------------*/
-const createRequest: TypedRequestHandler = async (req, res) => {
+const createRequest = asyncHandler(async (req: Request, res: Response) => {
     try {
         const { name, email, topic, message } = req.body;
 
@@ -105,8 +88,9 @@ const createRequest: TypedRequestHandler = async (req, res) => {
             return;
         }
 
-        await pool.execute(
-            'INSERT INTO support_requests (name, email, topic, message) VALUES (?, ?, ?, ?)',
+        await pool.query(
+            `INSERT INTO support_requests (name, email, topic, message)
+             VALUES ($1, $2, $3, $4)`,
             [name, email, topic, message]
         );
 
@@ -115,13 +99,13 @@ const createRequest: TypedRequestHandler = async (req, res) => {
         console.error('Lỗi khi tạo yêu cầu hỗ trợ:', error);
         res.status(500).json({ error: 'Lỗi server' });
     }
-};
+});
 
 /*----------------------------------
+Routes
 -----------------------------------*/
 router.get('/', adminAuth, getAllRequests);
 router.post('/:id/reply', adminAuth, replyToRequest);
 router.post('/', createRequest);
 
 export default router;
-

@@ -48,13 +48,13 @@ app.listen(PORT, () => {
 /*------------------------------------
 Check connect Database
 --------------------------------------*/
-database.getConnection()
-    .then((connection) => {
-        console.log('Database connected successfully!');
-        connection.release();
+database.connect()
+    .then(client => {
+        console.log("Database connected successfully!");
+        client.release();
     })
-    .catch((err) => {
-        console.error('Database connection failed:', err);
+    .catch(err => {
+        console.error("Database connection failed:", err);
     });
 
 

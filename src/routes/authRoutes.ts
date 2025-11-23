@@ -4,36 +4,32 @@ import { auth } from '../types/auth';
 
 const router = Router();
 
+/* ---------------------------------------------------
+   FIX EXPRESS TYPESCRIPT RETURN ERROR
+---------------------------------------------------- */
+const asyncHandler = (fn: any) => {
+    return (req: any, res: any, next: any) => {
+        Promise.resolve(fn(req, res, next)).catch(next);
+    };
+};
+
 /*----------------------------------
 Register Router
 -----------------------------------*/
-router.post('/signup', (req, res, next) => {
-    authController.signup(req, res, next).catch(next);
-});
+router.post('/signup', asyncHandler(authController.signup));
 
 /*----------------------------------
 Login Router
 -----------------------------------*/
-router.post('/login', (req, res, next) => {
-    authController.login(req, res, next).catch(next);
-});
+router.post('/login', asyncHandler(authController.login));
 
 /*----------------------------------
-Profile Routes - Add GET route
+Profile Routes
 -----------------------------------*/
-router.get('/profile', auth, (req, res, next) => {
-    authController.getProfile(req, res, next).catch(next);
-});
+router.get('/profile', auth, asyncHandler(authController.getProfile));
 
-router.put('/profile', auth, (req, res, next) => {
-    authController.updateProfile(req, res, next).catch(next);
-});
+router.put('/profile', auth, asyncHandler(authController.updateProfile));
 
-router.put('/change-password', auth, (req, res, next) => {
-    authController.changePassword(req, res, next).catch(next);
-});
+router.put('/change-password', auth, asyncHandler(authController.changePassword));
 
 export default router;
-
-
-

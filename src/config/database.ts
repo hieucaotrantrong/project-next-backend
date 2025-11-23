@@ -1,30 +1,15 @@
-import mysql from 'mysql2/promise';
+import dotenv from "dotenv";
+dotenv.config();   // ĐẢM BẢO .env load TRƯỚC
 
-const pool = mysql.createPool({
-//     /*------------------------------------------
-//     *Connect db used MysqlWordbend
-// //     -------------------------------------------*/
-    host: 'localhost',
-    user: 'root',
-    password: 'hieu@1010',
-    database: 'clothes_db',
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
+import { Pool } from "pg";
+
+const pool = new Pool({
+    host: process.env.PG_HOST || "localhost",
+    user: process.env.PG_USER || "postgres",
+    password: process.env.PG_PASSWORD || "",
+    database: process.env.PG_DATABASE || "clothes_db",
+    port: Number(process.env.PG_PORT) || 5432,
+    ssl: false
 });
 
 export default pool;
- /*------------------------------------------
-    Docker
-    -------------------------------------------*/
-    // const pool = mysql.createPool({
-    //     host: process.env.DB_HOST || 'localhost',
-    //     user: process.env.DB_USER || 'root',
-    //     password: process.env.DB_PASSWORD || 'hieu@1010',
-    //     database: process.env.DB_NAME || 'clothes_db',
-    //     waitForConnections: true,
-    //     connectionLimit: 10,
-    //     queueLimit: 0
-    // });
-    
-    // export default pool;
