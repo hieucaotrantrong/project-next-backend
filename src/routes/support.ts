@@ -60,7 +60,7 @@ const replyToRequest = asyncHandler(async (req: Request, res: Response) => {
 
         // Tạo thông báo
         await pool.query(
-            `INSERT INTO notifications (user_email, title, message, "read")
+            `INSERT INTO notifications (user_email, title, message, "is_read")
              VALUES ($1, $2, $3, FALSE)`,
             [
                 request.email,

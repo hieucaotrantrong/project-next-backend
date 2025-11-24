@@ -128,7 +128,7 @@ const updateOrderStatus = (req, res) => __awaiter(void 0, void 0, void 0, functi
         // update status
         yield database_1.default.query(`UPDATE orders SET status = $1 WHERE id = $2`, [status, id]);
         // tạo thông báo
-        yield database_1.default.query(`INSERT INTO notifications (user_email, title, message, "read")
+        yield database_1.default.query(`INSERT INTO notifications (user_email, title, message, "is_read")
              VALUES ($1, $2, $3, FALSE)`, [
             order.email,
             `Cập nhật đơn hàng: ${order.product_title}`,

@@ -56,7 +56,7 @@ const replyToRequest = asyncHandler((req, res) => __awaiter(void 0, void 0, void
              SET reply = $1, status = 'replied', replied_at = NOW() 
              WHERE id = $2`, [reply, id]);
         // Tạo thông báo
-        yield database_1.default.query(`INSERT INTO notifications (user_email, title, message, "read")
+        yield database_1.default.query(`INSERT INTO notifications (user_email, title, message, "is_read")
              VALUES ($1, $2, $3, FALSE)`, [
             request.email,
             `Phản hồi cho yêu cầu: ${request.topic}`,
