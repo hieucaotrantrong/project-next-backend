@@ -40,7 +40,7 @@ router.put('/:id/read', asyncHandler(async (req: Request, res: Response) => {
     try {
         await pool.query(
             `UPDATE notifications 
-             SET "read" = TRUE
+             SET is_read = TRUE
              WHERE id = $1`,
             [req.params.id]
         );
@@ -51,5 +51,6 @@ router.put('/:id/read', asyncHandler(async (req: Request, res: Response) => {
         res.status(500).json({ error: 'Lỗi server' });
     }
 }));
+
 
 export default router;
