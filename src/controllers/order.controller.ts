@@ -163,16 +163,18 @@ export const updateOrderStatus = async (req: Request, res: Response): Promise<vo
             [status, id]
         );
 
+
         // tạo thông báo
         await pool.query(
-            `INSERT INTO notifications (user_email, title, message, "read")
-             VALUES ($1, $2, $3, FALSE)`,
+            `INSERT INTO notifications (user_email, title, message, is_read)
+     VALUES ($1, $2, $3, FALSE)`,
             [
                 order.email,
                 `Cập nhật đơn hàng: ${order.product_title}`,
                 `Đơn hàng của bạn đã được cập nhật sang trạng thái: ${status}`
             ]
         );
+
 
         res.json({
             success: true,
