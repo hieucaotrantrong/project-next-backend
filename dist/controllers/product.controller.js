@@ -19,12 +19,18 @@ Get all products
 -----------------------------------*/
 const getAllProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        console.log('Attempting to query products...');
         const result = yield database_1.default.query('SELECT * FROM products');
+        console.log('Query successful, rows:', result.rows.length);
         res.json(result.rows);
     }
     catch (err) {
         console.error('Lỗi khi lấy sản phẩm:', err);
-        res.status(500).json({ error: 'Lỗi khi lấy sản phẩm' });
+        // Trả về thông tin lỗi chi tiết hơn trong development
+        res.status(500).json({
+            error: 'Lỗi khi lấy sản phẩm',
+            details: process.env.NODE_ENV !== 'production' ? err : undefined
+        });
     }
 });
 exports.getAllProducts = getAllProducts;
@@ -55,7 +61,7 @@ const createProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     const { title, originalprice, price, discount, tag, image, category } = req.body;
     console.log('Received data:', req.body);
     try {
-        const result = yield database_1.default.query(`INSERT INTO products (title, "originalprice", price, discount, tag, image, category)
+        const result = yield database_1.default.query(`INSERT INTO products (title, originalprice, price, discount, tag, image, category)
              VALUES ($1, $2, $3, $4, $5, $6, $7)
              RETURNING *`, [title, originalprice, price, discount, tag, image, category]);
         res.status(201).json(result.rows[0]);

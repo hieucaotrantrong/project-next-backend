@@ -39,12 +39,13 @@ const createOrder = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
             const userId = decoded.userId;
             // kiểm tra tồn tại ví
-            const walletResult = yield database_1.default.query(`SELECT balance FROM wallets WHERE user_id = $1`, [userId]);
+            const walletResult = yield database_1.default.query(`SELECT id, balance FROM wallets WHERE user_id = $1`, [userId]);
             const wallet = walletResult.rows[0];
             if (!wallet || wallet.balance < totalAmount) {
                 res.status(400).json({ error: "Số dư ví không đủ để thanh toán" });
                 return;
             }
+            const walletId = wallet.id;
             // Start transaction
             const client = yield database_1.default.connect();
             try {
@@ -55,10 +56,9 @@ const createOrder = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                      VALUES ($1, $2, $3, $4, $5, $6, $7, 'confirmed', 'wallet')`, [fullName, email, phone, address, productId, productTitle, productPrice]);
                 // trừ tiền ví
                 yield client.query(`UPDATE wallets SET balance = balance - $1 WHERE user_id = $2`, [totalAmount, userId]);
-                // Insert history (nếu có bảng)
-                yield client.query(`INSERT INTO wallet_transactions (user_id, type, amount, description)
-                     VALUES ($1, 'payment', $2, $3)
-                     ON CONFLICT DO NOTHING`, [userId, totalAmount, `Thanh toán đơn hàng: ${productTitle}`]);
+                // Insert giao dịch ví đúng chuẩn
+                yield client.query(`INSERT INTO wallet_transactions (wallet_id, type, amount, description)
+                     VALUES ($1, 'payment', $2, $3)`, [walletId, totalAmount, `Thanh toán đơn hàng: ${productTitle}`]);
                 yield client.query("COMMIT");
                 res.json({
                     message: "Đặt hàng & thanh toán thành công",
@@ -118,17 +118,14 @@ const updateOrderStatus = (req, res) => __awaiter(void 0, void 0, void 0, functi
             res.status(400).json({ error: "Trạng thái không hợp lệ" });
             return;
         }
-        // lấy order
         const orderResult = yield database_1.default.query(`SELECT id, email, product_title FROM orders WHERE id = $1`, [id]);
         if (orderResult.rows.length === 0) {
             res.status(404).json({ error: "Không tìm thấy đơn hàng" });
             return;
         }
         const order = orderResult.rows[0];
-        // update status
         yield database_1.default.query(`UPDATE orders SET status = $1 WHERE id = $2`, [status, id]);
-        // tạo thông báo
-        yield database_1.default.query(`INSERT INTO notifications (user_email, title, message, "is_read")
+        yield database_1.default.query(`INSERT INTO notifications (user_email, title, message, is_read)
              VALUES ($1, $2, $3, FALSE)`, [
             order.email,
             `Cập nhật đơn hàng: ${order.product_title}`,

@@ -46,7 +46,7 @@ router.get('/:email', asyncHandler((req, res) => __awaiter(void 0, void 0, void 
 router.put('/:id/read', asyncHandler((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         yield database_1.default.query(`UPDATE notifications 
-             SET "is_read" = TRUE
+             SET is_read = TRUE
              WHERE id = $1`, [req.params.id]);
         res.json({ success: true });
     }
