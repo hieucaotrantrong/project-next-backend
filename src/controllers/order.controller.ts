@@ -41,7 +41,7 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
 
             // kiểm tra tồn tại ví
             const walletResult = await pool.query(
-                `SELECT balance FROM wallets WHERE user_id = $1`,
+                `SELECT id, balance FROM wallets WHERE user_id = $1`,
                 [userId]
             );
 
@@ -50,6 +50,8 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
                 res.status(400).json({ error: "Số dư ví không đủ để thanh toán" });
                 return;
             }
+
+            const walletId = wallet.id;
 
             // Start transaction
             const client = await pool.connect();
@@ -70,12 +72,11 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
                     [totalAmount, userId]
                 );
 
-                // Insert history (nếu có bảng)
+                // Insert giao dịch ví đúng chuẩn
                 await client.query(
-                    `INSERT INTO wallet_transactions (user_id, type, amount, description)
-                     VALUES ($1, 'payment', $2, $3)
-                     ON CONFLICT DO NOTHING`,
-                    [userId, totalAmount, `Thanh toán đơn hàng: ${productTitle}`]
+                    `INSERT INTO wallet_transactions (wallet_id, type, amount, description)
+                     VALUES ($1, 'payment', $2, $3)`,
+                    [walletId, totalAmount, `Thanh toán đơn hàng: ${productTitle}`]
                 );
 
                 await client.query("COMMIT");
@@ -144,7 +145,6 @@ export const updateOrderStatus = async (req: Request, res: Response): Promise<vo
             return;
         }
 
-        // lấy order
         const orderResult = await pool.query(
             `SELECT id, email, product_title FROM orders WHERE id = $1`,
             [id]
@@ -157,24 +157,20 @@ export const updateOrderStatus = async (req: Request, res: Response): Promise<vo
 
         const order = orderResult.rows[0];
 
-        // update status
         await pool.query(
             `UPDATE orders SET status = $1 WHERE id = $2`,
             [status, id]
         );
 
-
-        // tạo thông báo
         await pool.query(
             `INSERT INTO notifications (user_email, title, message, is_read)
-     VALUES ($1, $2, $3, FALSE)`,
+             VALUES ($1, $2, $3, FALSE)`,
             [
                 order.email,
                 `Cập nhật đơn hàng: ${order.product_title}`,
                 `Đơn hàng của bạn đã được cập nhật sang trạng thái: ${status}`
             ]
         );
-
 
         res.json({
             success: true,
